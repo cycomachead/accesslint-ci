@@ -7,32 +7,32 @@ module Accesslint
         new(*args).perform
       end
 
-      def initialize(diff)
-        @diff = diff
+      def initialize(errors)
+        @errors = errors
       end
 
       def perform
-        RestClient.post(github_uri, payload)
+        RestClient.post(accesslint_service_url, payload)
       end
 
       private
 
-      attr_reader :diff
+      attr_reader :errors
 
-      def github_uri
-        @github_uri ||= "#{github_host}/issues/#{pull_request_number}/comments"
+      def accesslint_service_url
+        @accesslint_service_url ||= URI(
+          File.join([
+            "https://#{authentication}@www.accesslint.com/api/v1/projects/",
+            project_path,
+            "pulls",
+            pull_request_number,
+            "comments",
+          ])
+        ).to_s
       end
 
-      def github_host
-        URI.join(
-          "https://#{auth}@api.github.com/",
-          "repos/",
-          project_path,
-        )
-      end
-
-      def auth
-        "accesslint-ci:#{ENV.fetch('ACCESSLINT_GITHUB_TOKEN')}"
+      def authentication
+        "#{github_account}:#{ENV.fetch('ACCESSLINT_API_TOKEN')}"
       end
 
       def pull_request_number
@@ -57,16 +57,14 @@ module Accesslint
 
       def payload
         {
-          body: message,
+          body: {
+            errors: errors
+          }
         }.to_json
       end
 
-      def message
-        "Found #{diff.count} new accessibility issues: \n```\n#{snippet}\n```"
-      end
-
-      def snippet
-        diff.join("\n")
+      def github_account
+        ENV.fetch("CIRCLE_PROJECT_USERNAME")
       end
 
       def project_path
