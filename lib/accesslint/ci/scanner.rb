@@ -43,6 +43,7 @@ module Accesslint
       def crawl_site
         <<-SHELL
           wget #{host} 2>&1 \
+            --load-cookies loggedin.txt
             --spider \
             --recursive \
             --reject #{file_types_to_ignore} \
